@@ -1,0 +1,16 @@
+.{
+    .name = "zigup",
+    .version = "0.1.0",
+
+    .minimum_zig_version = "0.12.0",
+
+    .dependencies = .{
+        .@"clap" = .{
+            .path = "./external/zig-clap/"
+	    },
+    },
+
+    .paths = .{
+        "./src/",
+    },
+}

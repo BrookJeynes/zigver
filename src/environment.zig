@@ -12,7 +12,8 @@ pub fn getHomeDir() !std.fs.Dir {
             }, .{ .iterate = true });
         },
         .windows => {
-            return std.fs.openDirAbsolute(std.process.getenvW("USERPROFILE") orelse {
+            const utf16 = std.unicode.utf8ToUtf16LeStringLiteral;
+            return std.fs.openDirAbsoluteW(std.process.getenvW(utf16("USERPROFILE")) orelse {
                 log.err("Could not find install directory, %USERPROFILE% environment variable is not set", .{});
                 return error.MissingHomeEnvironmentVariable;
             }, .{ .iterate = true });

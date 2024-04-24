@@ -22,12 +22,15 @@ pub fn getHomeDir() !std.fs.Dir {
     }
 }
 
-pub fn fileExists(path: []const u8) bool {
+pub fn fileExists(dir: std.fs.Dir, path: []const u8) bool {
     const result = blk: {
-        _ = std.fs.cwd().openFile(path, .{}) catch |err| {
+        _ = dir.openFile(path, .{}) catch |err| {
             switch (err) {
                 error.FileNotFound => break :blk false,
-                else => break :blk true,
+                else => {
+                    log.info("{}", .{err});
+                    break :blk true;
+                },
             }
         };
         break :blk true;
@@ -40,25 +43,21 @@ pub fn create_version_sym_link(allocator: std.mem.Allocator, version: []const u8
     defer home_dir.close();
 
     var zig_home_path_buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
-    const zig_home_path = try home_dir.realpath(".zig/", &zig_home_path_buf);
+    const zig_home_path = try home_dir.realpath(".zig", &zig_home_path_buf);
 
-    const install_path_alloc = try std.fs.path.join(allocator, &[_][]const u8{ ".zig/versions/", version });
-    defer allocator.free(install_path_alloc);
-    var install_path_buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
-    const install_path = try home_dir.realpath(install_path_alloc, &install_path_buf);
+    const install_path = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "versions", version });
+    defer allocator.free(install_path);
 
-    const sym_link_path = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "current" });
-    defer allocator.free(sym_link_path);
-
-    var global_folder = try home_dir.openDir(".zig/", .{ .iterate = true });
+    var global_folder = try home_dir.openDir(".zig", .{ .iterate = true });
     defer global_folder.close();
 
-    try create_sym_link(global_folder, install_path, sym_link_path, .{ .is_directory = true });
+    try create_sym_link(global_folder, install_path, "current", .{ .is_directory = true });
 }
 
 fn create_sym_link(dir: std.fs.Dir, target_path: []const u8, sym_link_path: []const u8, flags: std.fs.Dir.SymLinkFlags) !void {
-    if (fileExists(sym_link_path)) {
-        try std.fs.cwd().deleteTree(sym_link_path);
+    // BUG: Symbolic links won't be detected if they're broken.
+    if (fileExists(dir, sym_link_path)) {
+        try dir.deleteTree(sym_link_path);
     }
     try dir.symLink(target_path, sym_link_path, flags);
 }

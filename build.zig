@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const min_zig_string = "0.12.0";
+const min_zig_string = "0.13.0-dev.44+9d64332a5";
 const version = std.SemanticVersion{ .major = 0, .minor = 1, .patch = 0 };
 
 const Build = blk: {
@@ -17,6 +17,8 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const options = b.addOptions();
+
+    options.addOption([]const u8, "min_zig_string", min_zig_string);
 
     options.addOption(std.SemanticVersion, "zigup_version", version);
     const exe_options_module = options.createModule();

@@ -2,11 +2,11 @@
     Zigup
 </h1>
 
-<div align="center">Cross-platform version manager for Zig, written in Zig</div>
+<div align="center">Cross-platform* version manager for Zig, written in Zig</div>
 
-<br><br>
+<br>
 
-Zigup is a small cross-platform command-line tool to help you easily manage your 
+Zigup is a small cross-platform* command-line tool to help you easily manage your 
 Zig versions.
 
 ## Features
@@ -17,7 +17,7 @@ Zig versions.
 - Cross-platform.
 
 ## Usage
-```bash
+```
 -h, --help
         Display this help and exit.
 
@@ -55,3 +55,6 @@ export PATH="$HOME/.zig/current:$PATH"
 
 ### Contributing
 Contributions, issues, and feature requests are always welcome!
+
+### Notes
+\* Windows support coming soon!

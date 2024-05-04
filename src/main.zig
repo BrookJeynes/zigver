@@ -29,6 +29,7 @@ pub fn main() !void {
         .diagnostic = &diag,
         .allocator = allocator,
     }) catch |err| {
+        // TODO: Pretty print this.
         diag.report(std.io.getStdErr().writer(), err) catch {};
         return err;
     };

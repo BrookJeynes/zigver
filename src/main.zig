@@ -15,7 +15,7 @@ pub fn main() !void {
     const params = comptime clap.parseParamsComptime(
         \\-h, --help             Display this help and exit.
         \\-l, --list             List installed Zig versions.
-        \\-v, --version          Get the version of Zigup.
+        \\-v, --version          Get the version of Zigver.
         \\-i, --install <str>    Install a version of Zig. Use `latest` or `master` for nightly builds.
         \\-u, --use <str>        Use an installed version of Zig.
         \\-r, --remove <str>     Remove a version of Zig.
@@ -43,7 +43,7 @@ pub fn main() !void {
             else => std.log.err("Unable to list out installed versions - {}.", .{err}),
         };
     } else if (res.args.version != 0) {
-        versions.get_zigup_version();
+        versions.get_zigver_version();
     } else if (res.args.install) |version| {
         const v = if (std.mem.eql(u8, version, "latest")) "master" else version;
 

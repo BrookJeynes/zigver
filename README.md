@@ -1,12 +1,12 @@
 <h1 align="center">
-    Zigup
+    Zigver
 </h1>
 
 <div align="center">Cross-platform version manager for Zig, written in Zig</div>
 
 <br><br>
 
-Zigup is a small cross-platform command-line tool to help you easily manage your 
+Zigver is a small cross-platform command-line tool to help you easily manage your 
 Zig versions.
 
 ## Features
@@ -25,7 +25,7 @@ Zig versions.
         List installed Zig versions.
 
 -v, --version
-        Get the version of Zigup.
+        Get the version of Zigver.
 
 -i, --install <str>
         Install a version of Zig. Use `latest` or `master` for nightly builds.
@@ -44,7 +44,7 @@ Zig versions.
 ```
 
 ## Install
-To install Zigup, check the "Releases" section in Github and download the 
+To install Zigver, check the "Releases" section in Github and download the 
 appropriate version.
 
 Then add the following line to your `~/.bashrc`, `~/.profile`, or `~/.zshrc` file.

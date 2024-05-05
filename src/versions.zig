@@ -69,9 +69,9 @@ const Install = struct {
     size: []const u8,
 };
 
-/// Zigup version.
-pub fn get_zigup_version() void {
-    log.info("Zigup: v{}", .{options.zigup_version});
+/// Zigver version.
+pub fn get_zigver_version() void {
+    log.info("Zigver: v{}", .{options.zigver_version});
 }
 
 /// Get installed versions on file system.

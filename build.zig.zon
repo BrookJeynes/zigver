@@ -1,5 +1,5 @@
 .{
-    .name = "zigup",
+    .name = "zigver",
     .version = "0.1.0",
 
     .minimum_zig_version = "0.13.0-dev.44+9d64332a5",

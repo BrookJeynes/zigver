@@ -27,7 +27,7 @@ pub fn build(b: *std.Build) !void {
 
     options.addOption([]const u8, "min_zig_string", min_zig_string);
 
-    options.addOption(std.SemanticVersion, "zigup_version", version);
+    options.addOption(std.SemanticVersion, "zigver_version", version);
     const exe_options_module = options.createModule();
 
     for (targets) |t| {
@@ -37,7 +37,7 @@ pub fn build(b: *std.Build) !void {
         const clap_mod = clap_dep.module("clap");
 
         const exe = b.addExecutable(.{
-            .name = "zigup",
+            .name = "zigver",
             .root_source_file = .{ .path = "src/main.zig" },
             .target = target,
             .optimize = optimize,

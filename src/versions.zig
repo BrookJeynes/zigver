@@ -6,6 +6,7 @@ const install = @import("./install.zig");
 const log = &@import("./log.zig").log;
 const architecture = @import("./architecture.zig");
 const download = @import("./download.zig");
+const zls = @import("./zls.zig");
 
 pub const ZigVersion = struct {
     /// Only in "master" version.
@@ -69,6 +70,11 @@ const Install = struct {
     size: []const u8,
 };
 
+pub const Version = struct {
+    name: []const u8,
+    has_zls: bool,
+};
+
 /// Zigver version.
 pub fn get_zigver_version() void {
     log.info("Zigver: v{}", .{options.zigver_version});
@@ -76,16 +82,19 @@ pub fn get_zigver_version() void {
 
 /// Get installed versions on file system.
 /// The caller owns the returned memory.
-fn get_installed_versions(allocator: std.mem.Allocator) !std.ArrayList([]const u8) {
+fn get_installed_versions(allocator: std.mem.Allocator) !std.ArrayList(Version) {
     var home_dir = try environment.getHomeDir();
     defer home_dir.close();
 
-    var versions = std.ArrayList([]const u8).init(allocator);
+    var versions = std.ArrayList(Version).init(allocator);
 
-    var dir = home_dir.openDir(".zig/versions/", .{ .iterate = true }) catch |err| blk: {
+    const versions_path = try std.fs.path.join(allocator, &[_][]const u8{ ".zig", "versions" });
+    defer allocator.free(versions_path);
+
+    var dir = home_dir.openDir(versions_path, .{ .iterate = true }) catch |err| blk: {
         switch (err) {
             error.FileNotFound => {
-                break :blk try home_dir.makeOpenPath(".zig/versions/", .{ .iterate = true });
+                break :blk try home_dir.makeOpenPath(versions_path, .{ .iterate = true });
             },
             else => {
                 return error.InvalidPermissions;
@@ -99,7 +108,11 @@ fn get_installed_versions(allocator: std.mem.Allocator) !std.ArrayList([]const u
         if (file.kind != .directory) {
             continue;
         }
-        try versions.append(file.name);
+
+        const zls_path = try std.fs.path.join(allocator, &[_][]const u8{ ".zig", "versions", file.name, "zls" });
+        defer allocator.free(zls_path);
+
+        try versions.append(.{ .name = file.name, .has_zls = environment.fileExists(home_dir, zls_path) });
     }
 
     return versions;
@@ -111,8 +124,10 @@ pub fn list_installed_versions(allocator: std.mem.Allocator) !void {
     defer versions.deinit();
 
     log.info("Installed versions:", .{});
+    // TODO: Sort this output.
+    // TODO: List current version.
     for (versions.items) |version| {
-        log.info("  - {s}", .{version});
+        log.info("  - {s}{s}", .{ version.name, if (version.has_zls) " (with ZLS)" else "" });
     }
 }
 
@@ -122,7 +137,7 @@ pub fn is_version_installed(allocator: std.mem.Allocator, version: []const u8) !
     defer versions.deinit();
 
     for (versions.items) |v| {
-        if (std.mem.eql(u8, v, version)) {
+        if (std.mem.eql(u8, v.name, version)) {
             return true;
         }
     }
@@ -187,7 +202,7 @@ pub fn remove_version(allocator: std.mem.Allocator, version: []const u8, force: 
 }
 
 /// Install a Zig version and switch to it.
-pub fn install_version(allocator: std.mem.Allocator, version: []const u8, force: bool) !void {
+pub fn install_version(allocator: std.mem.Allocator, version: []const u8, force: bool, with_zls: bool) !void {
     var home_dir = try environment.getHomeDir();
     defer home_dir.close();
 
@@ -204,6 +219,9 @@ pub fn install_version(allocator: std.mem.Allocator, version: []const u8, force:
         try remove_version(allocator, version, force);
     } else {
         if (environment.fileExists(home_dir, install_path)) {
+            if (with_zls == true) {
+                try install_zls(allocator, version, home_dir, zig_home_path);
+            }
             return error.VersionAlreadyInstalled;
         }
 
@@ -219,9 +237,46 @@ pub fn install_version(allocator: std.mem.Allocator, version: []const u8, force:
     }
 
     log.info("Installing Zig {s}...", .{zig_version.version orelse version});
-
     try install.install_version(allocator, version, install_path, zig_version);
     log.info("Zig {s} installed.", .{zig_version.version orelse version});
+
+    if (with_zls == true) {
+        try install_zls(allocator, version, home_dir, zig_home_path);
+    }
+}
+
+pub fn install_zls(allocator: std.mem.Allocator, version: []const u8, home_dir: std.fs.Dir, zig_home_path: []const u8) !void {
+    // TODO: This list will get longer over time, maybe make the list unsupported versions instead?
+    if (!std.mem.eql(u8, version, "master") and !std.mem.eql(u8, version, "0.11.0") and !std.mem.eql(u8, version, "0.12.0")) {
+        return error.UnsupportedZigVersionForZLS;
+    }
+
+    log.info("Installing ZLS.", .{});
+    zls.install_zls(allocator, zig_home_path) catch |err| switch (err) {
+        error.ZLSAlreadyInstalled => {
+            log.info("ZLS already installed. Skipping clone.", .{});
+        },
+        else => {
+            return err;
+        },
+    };
+
+    const zls_install_path = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "zls" });
+    defer allocator.free(zls_install_path);
+    try zls.checkout_zls_version(allocator, version, zls_install_path);
+
+    const zls_path = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "versions", version, "zls" });
+    defer allocator.free(zls_path);
+    if (!environment.fileExists(home_dir, zls_path)) {
+        log.info("Building ZLS...", .{});
+        try zls.build_zls(allocator, zls_install_path);
+        log.info("ZLS built.", .{});
+
+        try zls.move_zls_to_path(allocator, version, zig_home_path);
+    } else {
+        log.info("ZLS already built. Skipping build.", .{});
+    }
+    log.info("Installed ZLS.", .{});
 }
 
 /// Update a Zig version.
@@ -242,5 +297,12 @@ pub fn update_version(allocator: std.mem.Allocator, force: bool) !void {
         }
     }
 
-    try install_version(allocator, "master", true);
+    var home_dir = try environment.getHomeDir();
+    defer home_dir.close();
+    var zig_home_path_buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
+    const zig_home_path = try home_dir.realpath(".zig/", &zig_home_path_buf);
+    const zls_path = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "versions", "master", "zls" });
+    defer allocator.free(zls_path);
+
+    try install_version(allocator, "master", true, environment.fileExists(home_dir, zls_path));
 }

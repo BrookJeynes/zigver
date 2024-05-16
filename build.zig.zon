@@ -1,8 +1,8 @@
 .{
     .name = "zigver",
-    .version = "0.1.0",
+    .version = "0.2.0",
 
-    .minimum_zig_version = "0.13.0-dev.44+9d64332a5",
+    .minimum_zig_version = "0.13.0-dev.211+6a65561e3",
 
     .dependencies = .{
         .@"clap" = .{

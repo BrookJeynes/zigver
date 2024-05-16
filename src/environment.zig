@@ -38,6 +38,22 @@ pub fn fileExists(dir: std.fs.Dir, path: []const u8) bool {
     return result;
 }
 
+pub fn dirExists(dir: std.fs.Dir, path: []const u8) bool {
+    const result = blk: {
+        _ = dir.openDir(path, .{}) catch |err| {
+            switch (err) {
+                error.FileNotFound => break :blk false,
+                else => {
+                    log.info("{}", .{err});
+                    break :blk true;
+                },
+            }
+        };
+        break :blk true;
+    };
+    return result;
+}
+
 pub fn create_version_sym_link(allocator: std.mem.Allocator, version: []const u8) !void {
     var home_dir = try getHomeDir();
     defer home_dir.close();

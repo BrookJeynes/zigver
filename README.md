@@ -14,6 +14,7 @@ Zig versions.
 - Keep up-to-date with master.
 - Switch between installed Zig versions.
 - Remove installed Zig versions.
+- Install ZLS along with Zig.
 - Cross-platform.
 
 ## Usage
@@ -28,7 +29,7 @@ Zig versions.
         Get the version of Zigver.
 
 -i, --install <str>
-        Install a version of Zig. Use `latest` or `master` for nightly builds.
+        Install a version of Zig. Use `latest` or `master` for nightly builds. Use the --with-zls flag to install ZLS alongside the desired Zig version.
 
 -u, --use <str>
         Use an installed version of Zig.
@@ -37,10 +38,13 @@ Zig versions.
         Remove a version of Zig.
 
     --update
-        Update Zig version. Only applicable when running latest.
+        Update Zig version. Only applicable when running latest. Will update ZLS if installed.
 
 -f, --force
         Force an install/uninstall.
+
+    --with-zls
+        Install the corresponding ZLS LSP version. Only supports Zig versions 0.11.0 and above.
 ```
 
 ## Install

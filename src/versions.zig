@@ -77,7 +77,7 @@ pub const Version = struct {
 
 /// Zigver version.
 pub fn get_zigver_version() void {
-    log.info("Zigver: v{}", .{options.zigver_version});
+    log.info("Zigver: v{}", .{options.version});
 }
 
 /// Get installed versions on file system.
@@ -147,7 +147,7 @@ pub fn is_version_installed(allocator: std.mem.Allocator, version: []const u8) !
 
 /// Get the current version of Zig running local on system.
 pub fn get_local_zig_version(allocator: std.mem.Allocator) ![]const u8 {
-    var child_process = std.ChildProcess.init(&[_][]const u8{ "zig", "version" }, allocator);
+    var child_process = std.process.Child.init(&[_][]const u8{ "zig", "version" }, allocator);
     child_process.stdin_behavior = .Close;
     child_process.stdout_behavior = .Pipe;
     child_process.stderr_behavior = .Close;
@@ -247,7 +247,11 @@ pub fn install_version(allocator: std.mem.Allocator, version: []const u8, force:
 
 pub fn install_zls(allocator: std.mem.Allocator, version: []const u8, home_dir: std.fs.Dir, zig_home_path: []const u8) !void {
     // TODO: This list will get longer over time, maybe make the list unsupported versions instead?
-    if (!std.mem.eql(u8, version, "master") and !std.mem.eql(u8, version, "0.11.0") and !std.mem.eql(u8, version, "0.12.0")) {
+    if (!std.mem.eql(u8, version, "master") and
+        !std.mem.eql(u8, version, "0.11.0") and
+        !std.mem.eql(u8, version, "0.12.0") and
+        !std.mem.eql(u8, version, "0.13.0"))
+    {
         return error.UnsupportedZigVersionForZLS;
     }
 

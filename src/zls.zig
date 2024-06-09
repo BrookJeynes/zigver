@@ -15,7 +15,7 @@ pub fn install_zls(allocator: std.mem.Allocator, path: []const u8) !void {
     }
 
     log.info("Cloning ZLS...", .{});
-    const output = try std.ChildProcess.run(.{
+    const output = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "clone", "--recurse-submodules", "https://github.com/zigtools/zls.git" },
         .cwd_dir = install_dir,
@@ -37,15 +37,27 @@ pub fn checkout_zls_version(allocator: std.mem.Allocator, version: []const u8, p
     };
     defer install_dir.close();
 
-    const output = try std.ChildProcess.run(.{
+    const checkout_output = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "checkout", version },
         .cwd_dir = install_dir,
     });
-    defer allocator.free(output.stderr);
-    defer allocator.free(output.stdout);
+    defer allocator.free(checkout_output.stderr);
+    defer allocator.free(checkout_output.stdout);
 
-    if (output.term.Exited != 0) {
+    if (checkout_output.term.Exited != 0) {
+        return error.UnsupportedZigVersionForZLS;
+    }
+
+    const pull_output = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &[_][]const u8{ "git", "pull" },
+        .cwd_dir = install_dir,
+    });
+    defer allocator.free(pull_output.stderr);
+    defer allocator.free(pull_output.stdout);
+
+    if (pull_output.term.Exited != 0) {
         return error.UnsupportedZigVersionForZLS;
     }
 }
@@ -57,7 +69,7 @@ pub fn build_zls(allocator: std.mem.Allocator, path: []const u8) !void {
     };
     defer install_dir.close();
 
-    const output = try std.ChildProcess.run(.{
+    const output = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig", "build", "-Doptimize=ReleaseSafe" },
         .cwd_dir = install_dir,

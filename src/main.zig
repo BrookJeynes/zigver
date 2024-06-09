@@ -81,7 +81,7 @@ pub fn main() !void {
     } else if (res.args.update != 0) {
         versions.update_version(allocator, force) catch |err| switch (err) {
             error.InvalidPermissions => log.err("Unable to uninstall due to permissions.", .{}),
-            error.AlreadyRunningLatest => log.info("Already running latest master release.\nUse the `--force` flag to force an update.", .{}),
+            error.AlreadyRunningLatest => log.info("Already running latest release.\nUse the `--force` flag to force an update.", .{}),
             error.EmptyVersion => log.err("Zig is not detected on the system.", .{}),
             error.UnsupportedZigVersionForZLS => log.err("ZLS is not supported for requested version.", .{}),
             error.FailedToCloneZLS => log.err("Failed to clone ZLS repository.", .{}),

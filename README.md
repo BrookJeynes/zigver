@@ -1,13 +1,22 @@
-<h1 align="center">
-    Zigver
-</h1>
+# Zigver
 
-<div align="center">Cross-platform* version manager for Zig, written in Zig</div>
-
-<br>
-
-Zigver is a small cross-platform command-line tool to help you easily manage your 
+**Zigver** is a small Unix command-line tool to help you easily manage your 
 Zig versions.
+
+- [Installation](#installation)
+- [Features](#features)
+- [Usage](#usage)
+- [Contributing](#contributing)
+
+## Installation
+To install Zigver, check the "Releases" page or build locally 
+via `zig build --release=safe`.
+
+Then add the following line to your `~/.bashrc`, `~/.profile`, or `~/.zshrc` file.
+
+```bash
+export PATH="$HOME/.zig/current:$PATH"
+```
 
 ## Features
 - Install specific Zig versions.
@@ -15,7 +24,6 @@ Zig versions.
 - Switch between installed Zig versions.
 - Remove installed Zig versions.
 - Install ZLS along with Zig.
-- Cross-platform.
 
 ## Usage
 ```
@@ -47,18 +55,6 @@ Zig versions.
         Install the corresponding ZLS LSP version. Only supports Zig versions 0.11.0 and above.
 ```
 
-## Install
-To install Zigver, check the "Releases" section in Github and download the 
-appropriate version.
-
-Then add the following line to your `~/.bashrc`, `~/.profile`, or `~/.zshrc` file.
-
-```bash
-export PATH="$HOME/.zig/current:$PATH"
-```
-
-### Contributing
-Contributions, issues, and feature requests are always welcome!
-
-### Notes
-\* Windows support coming soon!
+## Contributing
+Contributions, issues, and feature requests are always welcome! This project is
+currently using the latest stable release of Zig (0.14.0).

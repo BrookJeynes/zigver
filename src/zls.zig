@@ -37,6 +37,20 @@ pub fn checkout_zls_version(allocator: std.mem.Allocator, version: []const u8, p
     };
     defer install_dir.close();
 
+    // Pull latest changes
+    const pull_output = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &[_][]const u8{ "git", "pull", ".", "master" },
+        .cwd_dir = install_dir,
+    });
+    defer allocator.free(pull_output.stderr);
+    defer allocator.free(pull_output.stdout);
+
+    if (pull_output.term.Exited != 0) {
+        return error.UnsupportedZigVersionForZLS;
+    }
+
+    // Checkout requested version
     const checkout_output = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "checkout", version },
@@ -46,18 +60,6 @@ pub fn checkout_zls_version(allocator: std.mem.Allocator, version: []const u8, p
     defer allocator.free(checkout_output.stdout);
 
     if (checkout_output.term.Exited != 0) {
-        return error.UnsupportedZigVersionForZLS;
-    }
-
-    const pull_output = try std.process.Child.run(.{
-        .allocator = allocator,
-        .argv = &[_][]const u8{ "git", "pull" },
-        .cwd_dir = install_dir,
-    });
-    defer allocator.free(pull_output.stderr);
-    defer allocator.free(pull_output.stdout);
-
-    if (pull_output.term.Exited != 0) {
         return error.UnsupportedZigVersionForZLS;
     }
 }

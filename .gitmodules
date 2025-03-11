@@ -1,3 +1,0 @@
-[submodule "external/zig-clap"]
-	path = external/zig-clap
-	url = git@github.com:Hejsil/zig-clap.git

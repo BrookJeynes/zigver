@@ -1,17 +1,20 @@
 .{
-    .name = "zigver",
+    .name = .zigver,
+    .fingerprint = 0xdf55ce920fb58c5a,
     .version = "0.3.0",
-
-    .minimum_zig_version = "0.14.0-dev.2+0884a4341",
+    .minimum_zig_version = "0.14.0",
 
     .dependencies = .{
         .clap = .{
-            .url = "git+https://github.com/Hejsil/zig-clap#60cd46aacff4960104703da9ba683077b1e3c76c",
-            .hash = "12205eb22c644df2469045083efe9c92189d56494ebe8901b36ef1218c3717e6eb78",
+            .url = "git+https://github.com/Hejsil/zig-clap#e47028deaefc2fb396d3d9e9f7bd776ae0b2a43a",
+            .hash = "clap-0.10.0-oBajB434AQBDh-Ei3YtoKIRxZacVPF1iSwp3IX_ZB8f0",
         },
     },
 
     .paths = .{
-        "./src/",
+        "LICENSE",
+        "build.zig",
+        "build.zig.zon",
+        "src",
     },
 }

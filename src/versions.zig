@@ -189,7 +189,7 @@ pub fn remove_version(allocator: std.mem.Allocator, version: []const u8, force: 
     var home_dir = try environment.getHomeDir();
     defer home_dir.close();
 
-    var install_path_buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
+    var install_path_buf: [std.fs.max_path_bytes]u8 = undefined;
     const install_path_alloc = try std.fs.path.join(allocator, &[_][]const u8{ ".zig", "versions", version });
     defer allocator.free(install_path_alloc);
     const install_path = try home_dir.realpath(install_path_alloc, &install_path_buf);
@@ -206,7 +206,7 @@ pub fn install_version(allocator: std.mem.Allocator, version: []const u8, force:
     var home_dir = try environment.getHomeDir();
     defer home_dir.close();
 
-    var zig_home_path_buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
+    var zig_home_path_buf: [std.fs.max_path_bytes]u8 = undefined;
     const zig_home_path = try home_dir.realpath(".zig/", &zig_home_path_buf);
 
     const install_path = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "versions", version });
@@ -303,7 +303,7 @@ pub fn update_version(allocator: std.mem.Allocator, force: bool) !void {
 
     var home_dir = try environment.getHomeDir();
     defer home_dir.close();
-    var zig_home_path_buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
+    var zig_home_path_buf: [std.fs.max_path_bytes]u8 = undefined;
     const zig_home_path = try home_dir.realpath(".zig/", &zig_home_path_buf);
     const zls_path = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "versions", "master", "zls" });
     defer allocator.free(zls_path);

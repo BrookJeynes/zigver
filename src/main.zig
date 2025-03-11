@@ -28,10 +28,9 @@ pub fn main() !void {
     var res = clap.parse(clap.Help, &params, clap.parsers.default, .{
         .diagnostic = &diag,
         .allocator = allocator,
-    }) catch |err| {
-        // TODO: Pretty print this.
-        diag.report(std.io.getStdErr().writer(), err) catch {};
-        return err;
+    }) catch {
+        log.err("Invalid argument. Use the `--help` flag to see available arguments.", .{});
+        std.posix.exit(1);
     };
     defer res.deinit();
 
@@ -52,8 +51,8 @@ pub fn main() !void {
 
         versions.install_version(allocator, v, force, with_zls) catch |err| switch (err) {
             error.UnknownVersion => log.err("Could not find requested version.", .{}),
-            error.AlreadyRunningLatest => log.info("Already running latest {s} release.\nUse the `--force` flag to force an install.", .{version}),
-            error.VersionAlreadyInstalled => log.info("Already running latest {s} release.\nUse the `--force` flag to force an install.", .{version}),
+            error.AlreadyRunningLatest => log.info("Already running latest {s} release. Use the `--force` flag to force an install.", .{version}),
+            error.VersionAlreadyInstalled => log.info("Already running latest {s} release. Use the `--force` flag to force an install.", .{version}),
             error.InvalidPermissions => log.err("Unable to install due to permissions.", .{}),
             error.UnsupportedZigVersionForZLS => log.err("ZLS is not supported for requested version.", .{}),
             error.FailedToCloneZLS => log.err("Failed to clone ZLS repository.", .{}),
@@ -81,7 +80,7 @@ pub fn main() !void {
     } else if (res.args.update != 0) {
         versions.update_version(allocator, force) catch |err| switch (err) {
             error.InvalidPermissions => log.err("Unable to uninstall due to permissions.", .{}),
-            error.AlreadyRunningLatest => log.info("Already running latest release.\nUse the `--force` flag to force an update.", .{}),
+            error.AlreadyRunningLatest => log.info("Already running latest release. Use the `--force` flag to force an update.", .{}),
             error.EmptyVersion => log.err("Zig is not detected on the system.", .{}),
             error.UnsupportedZigVersionForZLS => log.err("ZLS is not supported for requested version.", .{}),
             error.FailedToCloneZLS => log.err("Failed to clone ZLS repository.", .{}),

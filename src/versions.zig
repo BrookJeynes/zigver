@@ -246,13 +246,17 @@ pub fn install_version(allocator: std.mem.Allocator, version: []const u8, force:
 }
 
 pub fn install_zls(allocator: std.mem.Allocator, version: []const u8, home_dir: std.fs.Dir, zig_home_path: []const u8) !void {
-    // TODO: This list will get longer over time, maybe make the list unsupported versions instead?
-    if (!std.mem.eql(u8, version, "master") and
-        !std.mem.eql(u8, version, "0.11.0") and
-        !std.mem.eql(u8, version, "0.12.0") and
-        !std.mem.eql(u8, version, "0.13.0"))
-    {
-        return error.UnsupportedZigVersionForZLS;
+    supported: {
+        if (std.mem.eql(u8, version, "master")) break :supported;
+
+        var version_it = std.mem.splitScalar(u8, version, '.');
+        const major_str = version_it.next() orelse return error.UnsupportedZigVersionForZLS;
+        const major = std.fmt.parseInt(usize, major_str, 10) catch return error.UnsupportedZigVersionForZLS;
+        const minor_str = version_it.next() orelse return error.UnsupportedZigVersionForZLS;
+        const minor = std.fmt.parseInt(usize, minor_str, 10) catch return error.UnsupportedZigVersionForZLS;
+
+        // 0.11.0 and above support ZLS
+        if (major == 0 and minor < 11) return error.UnsupportedZigVersionForZLS;
     }
 
     log.info("Installing ZLS.", .{});

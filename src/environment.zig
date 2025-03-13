@@ -1,11 +1,11 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const log = &@import("./log.zig").log;
+const log = &@import("logger.zig").log;
 
 pub fn getHomeDir() !std.fs.Dir {
     return std.fs.openDirAbsolute(std.posix.getenv("HOME") orelse {
-        log.err("Could not find install directory, $HOME environment variable is not set", .{});
+        try log.err("Could not find install directory, $HOME environment variable is not set", .{});
         return error.MissingHomeEnvironmentVariable;
     }, .{ .iterate = true });
 }
@@ -16,7 +16,6 @@ pub fn fileExists(dir: std.fs.Dir, path: []const u8) bool {
             switch (err) {
                 error.FileNotFound => break :blk false,
                 else => {
-                    log.info("{}", .{err});
                     break :blk true;
                 },
             }
@@ -32,7 +31,6 @@ pub fn dirExists(dir: std.fs.Dir, path: []const u8) bool {
             switch (err) {
                 error.FileNotFound => break :blk false,
                 else => {
-                    log.info("{}", .{err});
                     break :blk true;
                 },
             }
@@ -42,7 +40,7 @@ pub fn dirExists(dir: std.fs.Dir, path: []const u8) bool {
     return result;
 }
 
-pub fn create_version_sym_link(allocator: std.mem.Allocator, version: []const u8) !void {
+pub fn createVersionSymLink(allocator: std.mem.Allocator, version: []const u8) !void {
     var home_dir = try getHomeDir();
     defer home_dir.close();
 
@@ -55,18 +53,15 @@ pub fn create_version_sym_link(allocator: std.mem.Allocator, version: []const u8
     var global_folder = try home_dir.openDir(".zig", .{ .iterate = true });
     defer global_folder.close();
 
-    try create_sym_link(global_folder, install_path, "current", .{ .is_directory = true });
-}
-
-fn create_sym_link(dir: std.fs.Dir, target_path: []const u8, sym_link_path: []const u8, flags: std.fs.Dir.SymLinkFlags) !void {
-    // BUG: Symbolic links won't be detected if they're broken.
-    if (fileExists(dir, sym_link_path)) {
-        try dir.deleteTree(sym_link_path);
+    // TODO: Symbolic links won't be detected if they're broken.
+    if (fileExists(global_folder, "current")) {
+        try global_folder.deleteTree("current");
     }
-    try dir.symLink(target_path, sym_link_path, flags);
+
+    try global_folder.symLink(install_path, "current", .{ .is_directory = true });
 }
 
-pub fn unpack_tar(allocator: std.mem.Allocator, dir: std.fs.Dir, reader: anytype) !void {
+pub fn unpackTar(allocator: std.mem.Allocator, dir: std.fs.Dir, reader: anytype) !void {
     var decompressed = try std.compress.xz.decompress(allocator, reader);
     defer decompressed.deinit();
     try std.tar.pipeToFileSystem(dir, decompressed.reader(), .{ .mode_mode = .executable_bit_only, .strip_components = 1 });

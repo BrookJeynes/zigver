@@ -1,7 +1,9 @@
 const std = @import("std");
-const log = &@import("./log.zig").log;
-const install = @import("./install.zig");
+
 const environment = @import("./environment.zig");
+const install = @import("./install.zig");
+
+const log = &@import("./logger.zig").log;
 
 /// Install a ZLS version.
 pub fn install_zls(allocator: std.mem.Allocator, path: []const u8) !void {
@@ -14,7 +16,7 @@ pub fn install_zls(allocator: std.mem.Allocator, path: []const u8) !void {
         return error.ZLSAlreadyInstalled;
     }
 
-    log.info("Cloning ZLS...", .{});
+    try log.info("Cloning ZLS...", .{});
     const output = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "clone", "--recurse-submodules", "https://github.com/zigtools/zls.git" },
@@ -27,7 +29,7 @@ pub fn install_zls(allocator: std.mem.Allocator, path: []const u8) !void {
         return error.FailedToCloneZLS;
     }
 
-    log.info("ZLS cloned.", .{});
+    try log.info("ZLS cloned.", .{});
 }
 
 /// Checkout ZLS version.
@@ -80,7 +82,7 @@ pub fn build_zls(allocator: std.mem.Allocator, path: []const u8) !void {
     defer allocator.free(output.stdout);
 
     if (output.term.Exited != 0) {
-        log.err("{s}", .{output.stderr});
+        try log.err("{s}", .{output.stderr});
         return error.FailedToBuildZLS;
     }
 }

@@ -2,7 +2,7 @@ const std = @import("std");
 
 /// Fetch JSON specifying Zig versions.
 /// The caller owns the returned memory.
-pub fn fetch_zig_versions_json(allocator: std.mem.Allocator) ![]const u8 {
+pub fn fetchZigVersions(allocator: std.mem.Allocator) ![]const u8 {
     var body = std.ArrayList(u8).init(allocator);
     defer body.deinit();
 

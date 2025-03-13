@@ -1,11 +1,9 @@
 const std = @import("std");
-
 const environment = @import("./environment.zig");
 const versions = @import("./versions.zig");
-const log = &@import("./log.zig").log;
 
 /// Install a Zig version.
-pub fn install_version(allocator: std.mem.Allocator, version: []const u8, path: []const u8, zig_version: versions.ZigVersion) !void {
+pub fn installVersion(allocator: std.mem.Allocator, version: []const u8, path: []const u8, zig_version: versions.ZigVersion) !void {
     // Initialise install dir.
     var install_dir = std.fs.cwd().makeOpenPath(path, .{}) catch {
         return error.InvalidPermissions;
@@ -25,9 +23,6 @@ pub fn install_version(allocator: std.mem.Allocator, version: []const u8, path: 
     try req.send();
     try req.wait();
 
-    // unpack tar
-    try environment.unpack_tar(allocator, install_dir, req.reader());
-
-    // Create symbolic link
-    try environment.create_version_sym_link(allocator, version);
+    try environment.unpackTar(allocator, install_dir, req.reader());
+    try environment.createVersionSymLink(allocator, version);
 }

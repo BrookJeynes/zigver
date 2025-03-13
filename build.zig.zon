@@ -1,7 +1,7 @@
 .{
     .name = .zigver,
     .fingerprint = 0xdf55ce920fb58c5a,
-    .version = "0.3.0",
+    .version = "0.3.1",
     .minimum_zig_version = "0.14.0",
 
     .dependencies = .{

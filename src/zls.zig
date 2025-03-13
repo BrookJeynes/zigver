@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const environment = @import("./environment.zig");
-const install = @import("./install.zig");
 
 const log = &@import("./logger.zig").log;
 
@@ -34,7 +33,10 @@ pub fn installZls(
         },
     };
 
-    const zls_install_path = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "zls" });
+    const zls_install_path = try std.fs.path.join(allocator, &[_][]const u8{
+        zig_home_path,
+        "zls",
+    });
     defer allocator.free(zls_install_path);
     try checkoutZlsVersion(allocator, version, zls_install_path);
 
@@ -69,7 +71,12 @@ pub fn cloneZls(allocator: std.mem.Allocator, path: []const u8) !void {
     try log.info("Cloning ZLS...", .{});
     const output = try std.process.Child.run(.{
         .allocator = allocator,
-        .argv = &[_][]const u8{ "git", "clone", "--recurse-submodules", "https://github.com/zigtools/zls.git" },
+        .argv = &[_][]const u8{
+            "git",
+            "clone",
+            "--recurse-submodules",
+            "https://github.com/zigtools/zls.git",
+        },
         .cwd_dir = install_dir,
     });
     defer allocator.free(output.stderr);
@@ -83,7 +90,11 @@ pub fn cloneZls(allocator: std.mem.Allocator, path: []const u8) !void {
 }
 
 /// Checkout ZLS version.
-pub fn checkoutZlsVersion(allocator: std.mem.Allocator, version: []const u8, path: []const u8) !void {
+pub fn checkoutZlsVersion(
+    allocator: std.mem.Allocator,
+    version: []const u8,
+    path: []const u8,
+) !void {
     var install_dir = std.fs.cwd().openDir(path, .{}) catch {
         return error.InvalidPermissions;
     };
@@ -138,16 +149,31 @@ pub fn buildZls(allocator: std.mem.Allocator, path: []const u8) !void {
 }
 
 /// Move ZLS version to Zig install path.
-pub fn moveZlsToPath(allocator: std.mem.Allocator, version: []const u8, zig_home_path: []const u8) !void {
+pub fn moveZlsToPath(
+    allocator: std.mem.Allocator,
+    version: []const u8,
+    zig_home_path: []const u8,
+) !void {
     var dir = std.fs.cwd().openDir(zig_home_path, .{}) catch {
         return error.InvalidPermissions;
     };
     defer dir.close();
 
-    const from = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "zls", "zig-out", "bin", "zls" });
+    const from = try std.fs.path.join(allocator, &[_][]const u8{
+        zig_home_path,
+        "zls",
+        "zig-out",
+        "bin",
+        "zls",
+    });
     defer allocator.free(from);
 
-    const to = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "versions", version, "zls" });
+    const to = try std.fs.path.join(allocator, &[_][]const u8{
+        zig_home_path,
+        "versions",
+        version,
+        "zls",
+    });
     defer allocator.free(to);
 
     try dir.rename(from, to);

@@ -40,14 +40,21 @@ pub fn dirExists(dir: std.fs.Dir, path: []const u8) bool {
     return result;
 }
 
-pub fn createVersionSymLink(allocator: std.mem.Allocator, version: []const u8) !void {
+pub fn createVersionSymLink(
+    allocator: std.mem.Allocator,
+    version: []const u8,
+) !void {
     var home_dir = try getHomeDir();
     defer home_dir.close();
 
     var zig_home_path_buf: [std.fs.max_path_bytes]u8 = undefined;
     const zig_home_path = try home_dir.realpath(".zig", &zig_home_path_buf);
 
-    const install_path = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "versions", version });
+    const install_path = try std.fs.path.join(allocator, &[_][]const u8{
+        zig_home_path,
+        "versions",
+        version,
+    });
     defer allocator.free(install_path);
 
     var global_folder = try home_dir.openDir(".zig", .{ .iterate = true });
@@ -58,11 +65,22 @@ pub fn createVersionSymLink(allocator: std.mem.Allocator, version: []const u8) !
         try global_folder.deleteTree("current");
     }
 
-    try global_folder.symLink(install_path, "current", .{ .is_directory = true });
+    try global_folder.symLink(
+        install_path,
+        "current",
+        .{ .is_directory = true },
+    );
 }
 
-pub fn unpackTar(allocator: std.mem.Allocator, dir: std.fs.Dir, reader: anytype) !void {
+pub fn unpackTar(
+    allocator: std.mem.Allocator,
+    dir: std.fs.Dir,
+    reader: anytype,
+) !void {
     var decompressed = try std.compress.xz.decompress(allocator, reader);
     defer decompressed.deinit();
-    try std.tar.pipeToFileSystem(dir, decompressed.reader(), .{ .mode_mode = .executable_bit_only, .strip_components = 1 });
+    try std.tar.pipeToFileSystem(dir, decompressed.reader(), .{
+        .mode_mode = .executable_bit_only,
+        .strip_components = 1,
+    });
 }

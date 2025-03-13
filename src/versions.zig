@@ -1,9 +1,7 @@
 const std = @import("std");
 
 const architecture = @import("./architecture.zig");
-const download = @import("./download.zig");
 const environment = @import("./environment.zig");
-const install = @import("./install.zig");
 const zls = @import("./zls.zig");
 
 const log = &@import("./logger.zig").log;
@@ -24,11 +22,31 @@ pub const ZigVersion = struct {
     json: std.json.Parsed(std.json.Value),
 
     pub fn init(allocator: std.mem.Allocator, version: []const u8) !ZigVersion {
-        const json_string = try download.fetchVersions(allocator);
-        // TODO: Freeing this might mess up things later down the line.
+        var json_string_buf = std.ArrayList(u8).init(allocator);
+        defer json_string_buf.deinit();
+
+        var client = std.http.Client{ .allocator = allocator };
+        defer client.deinit();
+
+        const fetch_options = std.http.Client.FetchOptions{
+            .location = std.http.Client.FetchOptions.Location{
+                .url = "https://ziglang.org/download/index.json",
+            },
+            .response_storage = .{ .dynamic = &json_string_buf },
+            .max_append_size = 100 * 1024 * 1024,
+        };
+
+        _ = try client.fetch(fetch_options);
+
+        const json_string = try json_string_buf.toOwnedSlice();
         defer allocator.free(json_string);
 
-        const json = try std.json.parseFromSlice(std.json.Value, allocator, json_string, .{});
+        const json = try std.json.parseFromSlice(
+            std.json.Value,
+            allocator,
+            json_string,
+            .{},
+        );
         errdefer json.deinit();
 
         const parsed_version = json.value.object.get(version) orelse {
@@ -83,13 +101,21 @@ fn getInstalledVersions(allocator: std.mem.Allocator) !std.ArrayList(Version) {
 
     var versions = std.ArrayList(Version).init(allocator);
 
-    const versions_path = try std.fs.path.join(allocator, &[_][]const u8{ ".zig", "versions" });
+    const versions_path = try std.fs.path.join(allocator, &[_][]const u8{
+        ".zig",
+        "versions",
+    });
     defer allocator.free(versions_path);
 
-    var dir = home_dir.openDir(versions_path, .{ .iterate = true }) catch |err| blk: {
+    var dir = home_dir.openDir(
+        versions_path,
+        .{ .iterate = true },
+    ) catch |err| blk: {
         switch (err) {
             error.FileNotFound => {
-                break :blk try home_dir.makeOpenPath(versions_path, .{ .iterate = true });
+                break :blk try home_dir.makeOpenPath(versions_path, .{
+                    .iterate = true,
+                });
             },
             else => {
                 return error.InvalidPermissions;
@@ -128,12 +154,18 @@ pub fn listInstalledVersions(allocator: std.mem.Allocator) !void {
     // TODO: Sort this output.
     // TODO: List current version.
     for (versions.items) |version| {
-        try log.info("  - {s}{s}", .{ version.name, if (version.has_zls) " (with ZLS)" else "" });
+        try log.info(
+            "  - {s}{s}",
+            .{ version.name, if (version.has_zls) " (with ZLS)" else "" },
+        );
     }
 }
 
 /// Check if a Zig version is installed.
-pub fn isVersionInstalled(allocator: std.mem.Allocator, version: []const u8) !bool {
+pub fn isVersionInstalled(
+    allocator: std.mem.Allocator,
+    version: []const u8,
+) !bool {
     var versions = try getInstalledVersions(allocator);
     defer versions.deinit();
 
@@ -148,7 +180,10 @@ pub fn isVersionInstalled(allocator: std.mem.Allocator, version: []const u8) !bo
 
 /// Get the current version of Zig running local on system.
 pub fn getLocalZigVersion(allocator: std.mem.Allocator) ![]const u8 {
-    var child_process = std.process.Child.init(&[_][]const u8{ "zig", "version" }, allocator);
+    var child_process = std.process.Child.init(
+        &[_][]const u8{ "zig", "version" },
+        allocator,
+    );
     child_process.stdin_behavior = .Close;
     child_process.stdout_behavior = .Pipe;
     child_process.stderr_behavior = .Close;
@@ -198,7 +233,11 @@ pub fn removeVersion(
     defer home_dir.close();
 
     var install_path_buf: [std.fs.max_path_bytes]u8 = undefined;
-    const install_path_alloc = try std.fs.path.join(allocator, &[_][]const u8{ ".zig", "versions", version });
+    const install_path_alloc = try std.fs.path.join(allocator, &[_][]const u8{
+        ".zig",
+        "versions",
+        version,
+    });
     defer allocator.free(install_path_alloc);
     const install_path = try home_dir.realpath(install_path_alloc, &install_path_buf);
 
@@ -222,7 +261,11 @@ pub fn installVersion(
     var zig_home_path_buf: [std.fs.max_path_bytes]u8 = undefined;
     const zig_home_path = try home_dir.realpath(".zig/", &zig_home_path_buf);
 
-    const install_path = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "versions", version });
+    const install_path = try std.fs.path.join(allocator, &[_][]const u8{
+        zig_home_path,
+        "versions",
+        version,
+    });
     defer allocator.free(install_path);
 
     var zig_version = try ZigVersion.init(allocator, version);
@@ -250,7 +293,29 @@ pub fn installVersion(
     }
 
     try log.info("Installing Zig {s}...", .{zig_version.version orelse version});
-    try install.installVersion(allocator, version, install_path, zig_version);
+
+    // Initialise install dir.
+    var install_dir = std.fs.cwd().makeOpenPath(install_path, .{}) catch {
+        return error.InvalidPermissions;
+    };
+    defer install_dir.close();
+
+    // Fetch tar.
+    var client = std.http.Client{ .allocator = allocator };
+    defer client.deinit();
+
+    var headerBuffer: [256 * 1024]u8 = undefined;
+    const uri = std.Uri.parse(zig_version.binary.tarball) catch unreachable;
+
+    var req = try client.open(.GET, uri, .{ .server_header_buffer = &headerBuffer });
+    defer req.deinit();
+
+    try req.send();
+    try req.wait();
+
+    try environment.unpackTar(allocator, install_dir, req.reader());
+    try environment.createVersionSymLink(allocator, version);
+
     try log.info("Zig {s} installed.", .{zig_version.version orelse version});
 
     if (with_zls == true) {
@@ -286,5 +351,10 @@ pub fn updateVersion(allocator: std.mem.Allocator, force: bool) !void {
     );
     defer allocator.free(zls_path);
 
-    try installVersion(allocator, "master", true, environment.fileExists(home_dir, zls_path));
+    try installVersion(
+        allocator,
+        "master",
+        true,
+        environment.fileExists(home_dir, zls_path),
+    );
 }

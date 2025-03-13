@@ -5,8 +5,58 @@ const install = @import("./install.zig");
 
 const log = &@import("./logger.zig").log;
 
-/// Install a ZLS version.
-pub fn install_zls(allocator: std.mem.Allocator, path: []const u8) !void {
+pub fn installZls(
+    allocator: std.mem.Allocator,
+    version: []const u8,
+    home_dir: std.fs.Dir,
+    zig_home_path: []const u8,
+) !void {
+    supported: {
+        if (std.mem.eql(u8, version, "master")) break :supported;
+
+        var version_it = std.mem.splitScalar(u8, version, '.');
+        const major_str = version_it.next() orelse return error.UnsupportedZigVersionForZLS;
+        const major = std.fmt.parseInt(usize, major_str, 10) catch return error.UnsupportedZigVersionForZLS;
+        const minor_str = version_it.next() orelse return error.UnsupportedZigVersionForZLS;
+        const minor = std.fmt.parseInt(usize, minor_str, 10) catch return error.UnsupportedZigVersionForZLS;
+
+        // 0.11.0 and above support ZLS
+        if (major == 0 and minor < 11) return error.UnsupportedZigVersionForZLS;
+    }
+
+    try log.info("Installing ZLS.", .{});
+    cloneZls(allocator, zig_home_path) catch |err| switch (err) {
+        error.ZLSAlreadyInstalled => {
+            try log.info("ZLS already installed. Skipping clone.", .{});
+        },
+        else => {
+            return err;
+        },
+    };
+
+    const zls_install_path = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "zls" });
+    defer allocator.free(zls_install_path);
+    try checkoutZlsVersion(allocator, version, zls_install_path);
+
+    const zls_path = try std.fs.path.join(
+        allocator,
+        &[_][]const u8{ zig_home_path, "versions", version, "zls" },
+    );
+    defer allocator.free(zls_path);
+    if (!environment.fileExists(home_dir, zls_path)) {
+        try log.info("Building ZLS...", .{});
+        try buildZls(allocator, zls_install_path);
+        try log.info("ZLS built.", .{});
+
+        try moveZlsToPath(allocator, version, zig_home_path);
+    } else {
+        try log.info("ZLS already built. Skipping build.", .{});
+    }
+    try log.info("Installed ZLS.", .{});
+}
+
+/// Clone ZLS repo to disk.
+pub fn cloneZls(allocator: std.mem.Allocator, path: []const u8) !void {
     var install_dir = std.fs.cwd().openDir(path, .{}) catch {
         return error.InvalidPermissions;
     };
@@ -33,7 +83,7 @@ pub fn install_zls(allocator: std.mem.Allocator, path: []const u8) !void {
 }
 
 /// Checkout ZLS version.
-pub fn checkout_zls_version(allocator: std.mem.Allocator, version: []const u8, path: []const u8) !void {
+pub fn checkoutZlsVersion(allocator: std.mem.Allocator, version: []const u8, path: []const u8) !void {
     var install_dir = std.fs.cwd().openDir(path, .{}) catch {
         return error.InvalidPermissions;
     };
@@ -67,7 +117,7 @@ pub fn checkout_zls_version(allocator: std.mem.Allocator, version: []const u8, p
 }
 
 /// Build ZLS version.
-pub fn build_zls(allocator: std.mem.Allocator, path: []const u8) !void {
+pub fn buildZls(allocator: std.mem.Allocator, path: []const u8) !void {
     var install_dir = std.fs.cwd().openDir(path, .{}) catch {
         return error.InvalidPermissions;
     };
@@ -88,7 +138,7 @@ pub fn build_zls(allocator: std.mem.Allocator, path: []const u8) !void {
 }
 
 /// Move ZLS version to Zig install path.
-pub fn move_zls_to_path(allocator: std.mem.Allocator, version: []const u8, zig_home_path: []const u8) !void {
+pub fn moveZlsToPath(allocator: std.mem.Allocator, version: []const u8, zig_home_path: []const u8) !void {
     var dir = std.fs.cwd().openDir(zig_home_path, .{}) catch {
         return error.InvalidPermissions;
     };

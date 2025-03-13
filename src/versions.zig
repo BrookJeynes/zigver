@@ -24,7 +24,7 @@ pub const ZigVersion = struct {
     json: std.json.Parsed(std.json.Value),
 
     pub fn init(allocator: std.mem.Allocator, version: []const u8) !ZigVersion {
-        const json_string = try download.fetchZigVersions(allocator);
+        const json_string = try download.fetchVersions(allocator);
         // TODO: Freeing this might mess up things later down the line.
         defer allocator.free(json_string);
 
@@ -233,7 +233,7 @@ pub fn installVersion(
     } else {
         if (environment.fileExists(home_dir, install_path)) {
             if (with_zls == true) {
-                try installZls(allocator, version, home_dir, zig_home_path);
+                try zls.installZls(allocator, version, home_dir, zig_home_path);
             }
             return error.VersionAlreadyInstalled;
         }
@@ -254,58 +254,8 @@ pub fn installVersion(
     try log.info("Zig {s} installed.", .{zig_version.version orelse version});
 
     if (with_zls == true) {
-        try installZls(allocator, version, home_dir, zig_home_path);
+        try zls.installZls(allocator, version, home_dir, zig_home_path);
     }
-}
-
-pub fn installZls(
-    allocator: std.mem.Allocator,
-    version: []const u8,
-    home_dir: std.fs.Dir,
-    zig_home_path: []const u8,
-) !void {
-    supported: {
-        if (std.mem.eql(u8, version, "master")) break :supported;
-
-        var version_it = std.mem.splitScalar(u8, version, '.');
-        const major_str = version_it.next() orelse return error.UnsupportedZigVersionForZLS;
-        const major = std.fmt.parseInt(usize, major_str, 10) catch return error.UnsupportedZigVersionForZLS;
-        const minor_str = version_it.next() orelse return error.UnsupportedZigVersionForZLS;
-        const minor = std.fmt.parseInt(usize, minor_str, 10) catch return error.UnsupportedZigVersionForZLS;
-
-        // 0.11.0 and above support ZLS
-        if (major == 0 and minor < 11) return error.UnsupportedZigVersionForZLS;
-    }
-
-    try log.info("Installing ZLS.", .{});
-    zls.install_zls(allocator, zig_home_path) catch |err| switch (err) {
-        error.ZLSAlreadyInstalled => {
-            try log.info("ZLS already installed. Skipping clone.", .{});
-        },
-        else => {
-            return err;
-        },
-    };
-
-    const zls_install_path = try std.fs.path.join(allocator, &[_][]const u8{ zig_home_path, "zls" });
-    defer allocator.free(zls_install_path);
-    try zls.checkout_zls_version(allocator, version, zls_install_path);
-
-    const zls_path = try std.fs.path.join(
-        allocator,
-        &[_][]const u8{ zig_home_path, "versions", version, "zls" },
-    );
-    defer allocator.free(zls_path);
-    if (!environment.fileExists(home_dir, zls_path)) {
-        try log.info("Building ZLS...", .{});
-        try zls.build_zls(allocator, zls_install_path);
-        try log.info("ZLS built.", .{});
-
-        try zls.move_zls_to_path(allocator, version, zig_home_path);
-    } else {
-        try log.info("ZLS already built. Skipping build.", .{});
-    }
-    try log.info("Installed ZLS.", .{});
 }
 
 /// Update a Zig version.

@@ -7,7 +7,6 @@ const arch = switch (builtin.cpu.arch) {
 };
 
 const os = switch (builtin.os.tag) {
-    .windows => "windows",
     .linux => "linux",
     .macos => "macos",
     else => @compileError("Unsupported OS"),
